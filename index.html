@@ -33,7 +33,7 @@
 <body>
 
 <div class="container">
-    <h2>報到碼產生器</h2>
+    <h2>活動報到系統</h2>
     
     <div class="form-group">
         <label>姓名</label>
@@ -104,7 +104,7 @@
         const finalString = name + year + month + todayStr;
 
         // 顯示內容
-        document.getElementById('codeString').innerText = "報到內容：" + finalString;
+        //document.getElementById('codeString').innerText = "報到內容：" + finalString;
         document.getElementById('qrcode-area').style.display = 'flex';
 
         // 使用 QRious 產生 QR Code
