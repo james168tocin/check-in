@@ -4,124 +4,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>活動報到系統</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { text-align: center; color: #2d3748; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #4a5568; }
-        input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
-        input:focus { border-color: #4299e1; outline: none; }
-        button { width: 100%; padding: 16px; background-color: #4299e1; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
-        button:active { background-color: #3182ce; transform: scale(0.98); }
+        body { font-family: -apple-system, system-ui, sans-serif; background-color: #f2f2f7; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 380px; }
+        h2 { text-align: center; color: #1c1c1e; margin-bottom: 25px; }
+        .field { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #3a3a3c; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #d1d1d6; border-radius: 10px; font-size: 16px; box-sizing: border-box; background: #fff; }
+        button { width: 100%; padding: 15px; background-color: #007aff; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        button:active { opacity: 0.8; }
         
-        #qrcode-area {
+        #qrcode-container {
             margin-top: 30px;
             display: none;
             flex-direction: column;
             align-items: center;
-            text-align: center;
         }
-        #qrcode-output {
-            padding: 15px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        /* 確保畫布清晰且有足夠留白 */
+        canvas {
+            border: 1px solid #eee;
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
         }
-        .preview-box { margin-top: 15px; font-size: 14px; color: #718096; background: #edf2f7; padding: 10px; border-radius: 8px; width: 100%; word-break: break-all; }
-        .status-tag { color: #48bb78; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+        .info { margin-top: 15px; font-size: 14px; color: #8e8e93; text-align: center; word-break: break-all; background: #f2f2f7; padding: 10px; border-radius: 8px; width: 100%; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="card">
     <h2>活動報到碼</h2>
     
-    <div class="form-group">
-        <label>填寫姓名</label>
-        <input type="text" id="userName" placeholder="請輸入姓名">
+    <div class="field">
+        <label>姓名</label>
+        <input type="text" id="userName" placeholder="請輸入姓名" autocomplete="off">
     </div>
 
-    <div class="form-group">
+    <div class="field">
         <label>出生年 (西元)</label>
         <select id="birthYear"></select>
     </div>
 
-    <div class="form-group">
+    <div class="field">
         <label>出生月</label>
         <select id="birthMonth"></select>
     </div>
 
-    <button onclick="makeCode()">產生報到碼</button>
+    <button onclick="generate()">產生 QR Code</button>
 
-    <div id="qrcode-area">
-        <span class="status-tag">● 產生成功 (已優化編碼)</span>
-        <div id="qrcode-output"></div>
-        <div class="preview-box">
-            <strong>掃描內容預覽：</strong><br>
-            <span id="contentPreview"></span>
+    <div id="qrcode-container">
+        <canvas id="qrCanvas"></canvas>
+        <div class="info">
+            <strong>內容確認：</strong><br>
+            <span id="txtOutput"></span>
         </div>
     </div>
 </div>
 
 <script>
-    // 1. 初始化選單
-    const yearSelect = document.getElementById('birthYear');
-    const monthSelect = document.getElementById('birthMonth');
+    // 1. 初始化下拉選單
+    const yearEl = document.getElementById('birthYear');
+    const monthEl = document.getElementById('birthMonth');
 
     for (let y = 2020; y >= 1920; y--) {
         let opt = document.createElement('option');
-        opt.value = y; opt.innerHTML = y + ' 年';
-        yearSelect.appendChild(opt);
+        opt.value = y; opt.textContent = y + ' 年';
+        yearEl.appendChild(opt);
     }
 
     for (let m = 1; m <= 12; m++) {
         let opt = document.createElement('option');
-        let mVal = m.toString().padStart(2, '0');
-        opt.value = mVal; opt.innerHTML = mVal + ' 月';
-        monthSelect.appendChild(opt);
+        let val = m.toString().padStart(2, '0');
+        opt.value = val; opt.textContent = val + ' 月';
+        monthEl.appendChild(opt);
     }
 
-    // 2. 核心產生邏輯
-    function makeCode() {
+    // 2. 產生邏輯
+    function generate() {
         const name = document.getElementById('userName').value.trim();
-        const year = document.getElementById('birthYear').value;
-        const month = document.getElementById('birthMonth').value;
+        const year = yearEl.value;
+        const month = monthEl.value;
 
         if (!name) {
-            alert("請填寫姓名喔！");
+            alert("請填寫姓名");
             return;
         }
 
-        const today = new Date();
-        const todayStr = today.getFullYear() + 
-                         (today.getMonth() + 1).toString().padStart(2, '0') + 
-                         today.getDate().toString().padStart(2, '0');
+        // 取得今日 YYYYMMDD
+        const now = new Date();
+        const today = now.getFullYear() + 
+                      (now.getMonth() + 1).toString().padStart(2, '0') + 
+                      now.getDate().toString().padStart(2, '0');
 
-        const finalString = name + year + month + todayStr;
+        // 組合字串
+        const dataString = name + year + month + today;
 
-        try {
-            // 使用 qrcode-generator 指定版本與容錯
-            // typeNumber: 0 代表自動偵測長度
-            // errorCorrectionLevel: 'H' (最高等級，保證好掃)
-            var qr = qrcode(0, 'H');
-            
-            // 重要：這一步會處理中文 UTF-8 編碼
-            qr.addData(finalString);
-            qr.make();
-
-            // 將產出的圖案放入頁面 (大小 8 代表每個模組 8 像素)
-            document.getElementById('qrcode-output').innerHTML = qr.createImgTag(6);
-            document.getElementById('contentPreview').innerText = finalString;
-            document.getElementById('qrcode-area').style.display = 'flex';
-
-            // 滾動畫面
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        } catch (e) {
-            console.error(e);
-            alert("QR Code 產生失敗，請聯繫工程師。");
-        }
+        // 使用 QRCode 函式庫渲染到 Canvas
+        const canvas = document.getElementById('qrCanvas');
+        
+        // 關鍵設定：使用此函式庫能自動處理 UTF-8
+        QRCode.toCanvas(canvas, dataString, {
+            width: 260,
+            margin: 2,
+            errorCorrectionLevel: 'M', // 中等容錯，平衡複雜度與好掃程度
+            color: {
+                dark: "#000000",
+                light: "#ffffff"
+            }
+        }, function (error) {
+            if (error) {
+                console.error(error);
+                alert("產生失敗");
+            } else {
+                document.getElementById('txtOutput').textContent = dataString;
+                document.getElementById('qrcode-container').style.display = 'flex';
+                
+                // 產生後震動回饋 (如果手機支援)
+                if (navigator.vibrate) navigator.vibrate(50);
+                
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        });
     }
 </script>
 
