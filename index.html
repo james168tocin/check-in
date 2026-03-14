@@ -4,39 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>活動報到系統</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { text-align: center; color: #333; margin-bottom: 25px; }
+        body { font-family: -apple-system, sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: #2d3748; }
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        button:active { background-color: #0056b3; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #4a5568; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
+        input:focus { border-color: #4299e1; outline: none; }
+        button { width: 100%; padding: 16px; background-color: #4299e1; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; transition: 0.2s; }
+        button:active { background-color: #3182ce; transform: scale(0.98); }
         
         #qrcode-area {
             margin-top: 30px;
             display: none;
             flex-direction: column;
             align-items: center;
+            text-align: center;
         }
-        /* QR Code 畫布樣式 */
-        canvas {
-            border: 8px solid white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        #qrcode-output {
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        .preview-box { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; width: 100%; text-align: center; }
-        .result-text { font-size: 14px; color: #666; word-break: break-all; font-family: monospace; }
+        .preview-box { margin-top: 15px; font-size: 14px; color: #718096; background: #edf2f7; padding: 10px; border-radius: 8px; width: 100%; word-break: break-all; }
+        .status-tag { color: #48bb78; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>活動報到系統</h2>
+    <h2>活動報到碼</h2>
     
     <div class="form-group">
-        <label>姓名</label>
+        <label>填寫姓名</label>
         <input type="text" id="userName" placeholder="請輸入姓名">
     </div>
 
@@ -50,12 +53,14 @@
         <select id="birthMonth"></select>
     </div>
 
-    <button onclick="generateCode()">產生報到碼</button>
+    <button onclick="makeCode()">產生報到碼</button>
 
     <div id="qrcode-area">
-        <canvas id="qrCanvas"></canvas>
+        <span class="status-tag">● 產生成功 (已優化編碼)</span>
+        <div id="qrcode-output"></div>
         <div class="preview-box">
-            <p class="result-text" id="codeString"></p>
+            <strong>掃描內容預覽：</strong><br>
+            <span id="contentPreview"></span>
         </div>
     </div>
 </div>
@@ -78,45 +83,45 @@
         monthSelect.appendChild(opt);
     }
 
-    // 2. 產生邏輯
-    function generateCode() {
+    // 2. 核心產生邏輯
+    function makeCode() {
         const name = document.getElementById('userName').value.trim();
         const year = document.getElementById('birthYear').value;
         const month = document.getElementById('birthMonth').value;
 
         if (!name) {
-            alert("請填寫姓名！");
-            return;
-        }
-
-        // 檢查函式庫是否載入成功
-        if (typeof QRious === 'undefined') {
-            alert("系統正在載入中，請稍候 3 秒再試一次。");
+            alert("請填寫姓名喔！");
             return;
         }
 
         const today = new Date();
-        const tY = today.getFullYear();
-        const tM = (today.getMonth() + 1).toString().padStart(2, '0');
-        const tD = today.getDate().toString().padStart(2, '0');
-        const todayStr = `${tY}${tM}${tD}`;
+        const todayStr = today.getFullYear() + 
+                         (today.getMonth() + 1).toString().padStart(2, '0') + 
+                         today.getDate().toString().padStart(2, '0');
 
         const finalString = name + year + month + todayStr;
 
-        // 顯示內容
-        document.getElementById('codeString').innerText = "報到內容：" + finalString;
-        document.getElementById('qrcode-area').style.display = 'flex';
+        try {
+            // 使用 qrcode-generator 指定版本與容錯
+            // typeNumber: 0 代表自動偵測長度
+            // errorCorrectionLevel: 'H' (最高等級，保證好掃)
+            var qr = qrcode(0, 'H');
+            
+            // 重要：這一步會處理中文 UTF-8 編碼
+            qr.addData(finalString);
+            qr.make();
 
-        // 使用 QRious 產生 QR Code
-        const qr = new QRious({
-            element: document.getElementById('qrCanvas'),
-            value: finalString,
-            size: 250,
-            level: 'H' // 高容錯等級
-        });
+            // 將產出的圖案放入頁面 (大小 8 代表每個模組 8 像素)
+            document.getElementById('qrcode-output').innerHTML = qr.createImgTag(6);
+            document.getElementById('contentPreview').innerText = finalString;
+            document.getElementById('qrcode-area').style.display = 'flex';
 
-        // 平滑捲動
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            // 滾動畫面
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        } catch (e) {
+            console.error(e);
+            alert("QR Code 產生失敗，請聯繫工程師。");
+        }
     }
 </script>
 
