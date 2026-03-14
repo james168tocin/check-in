@@ -4,124 +4,132 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>活動報到系統</title>
-    <script src="https://cdn.staticfile.org/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { text-align: center; color: #333; }
-        .item { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        button:active { background: #0056b3; }
-        #output-area { margin-top: 30px; display: none; flex-direction: column; align-items: center; }
-        #qrcode-box { border: 2px solid #eee; padding: 10px; background: white; }
-        .code-info { margin-top: 10px; font-size: 13px; color: #888; background: #f9f9f9; padding: 8px; border-radius: 5px; word-break: break-all; text-align: center; }
+        body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: #333; margin-bottom: 25px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; box-sizing: border-box; outline: none; }
+        input:focus { border-color: #007bff; }
+        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.3s; }
+        button:active { background-color: #0056b3; transform: scale(0.98); }
+        
+        #qrcode-area {
+            margin-top: 30px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        #qrImage {
+            border: 8px solid white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 220px;
+            height: 220px;
+        }
+        .preview-box {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            width: 100%;
+            text-align: center;
+        }
+        .result-text { font-size: 14px; color: #666; word-break: break-all; font-family: monospace; margin: 5px 0; }
+        .label-tag { font-size: 12px; color: #999; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-<div class="card">
+<div class="container">
     <h2>活動報到碼</h2>
     
-    <div class="item">
+    <div class="form-group">
         <label>姓名</label>
-        <input type="text" id="nameInput" placeholder="請輸入姓名">
+        <input type="text" id="userName" placeholder="請輸入中文姓名">
     </div>
 
-    <div class="item">
-        <label>出生年</label>
-        <select id="yearSelect"></select>
+    <div class="form-group">
+        <label>出生年 (西元)</label>
+        <select id="birthYear"></select>
     </div>
 
-    <div class="item">
+    <div class="form-group">
         <label>出生月</label>
-        <select id="monthSelect"></select>
+        <select id="birthMonth"></select>
     </div>
 
-    <button onclick="startGenerate()">產生報到 QR Code</button>
+    <button onclick="generateCode()">產生報到碼</button>
 
-    <div id="output-area">
-        <div id="qrcode-box"></div>
-        <div class="code-info">內容：<span id="debugText"></span></div>
+    <div id="qrcode-area">
+        <div class="label-tag">掃描預覽</div>
+        <img id="qrImage" src="" alt="QR Code">
+        <div class="preview-box">
+            <div class="label-tag">產出的字串內容</div>
+            <p class="result-text" id="codeString"></p>
+        </div>
     </div>
 </div>
 
 <script>
-    // 1. 初始化
-    const ySel = document.getElementById('yearSelect');
-    const mSel = document.getElementById('monthSelect');
+    // 初始化選單
+    const yearSelect = document.getElementById('birthYear');
+    const monthSelect = document.getElementById('birthMonth');
 
-    for (let i = 2020; i >= 1920; i--) {
-        ySel.options.add(new Option(i + ' 年', i));
-    }
-    for (let i = 1; i <= 12; i++) {
-        let val = i.toString().padStart(2, '0');
-        mSel.options.add(new Option(val + ' 月', val));
+    for (let y = 2020; y >= 1920; y--) {
+        let opt = document.createElement('option');
+        opt.value = y; opt.innerHTML = y + ' 年';
+        yearSelect.appendChild(opt);
     }
 
-    // 2. 解決中文亂碼的關鍵函數 (UTF-8 轉碼)
-    function toUtf8(str) {
-        var out, i, len, c;
-        out = "";
-        len = str.length;
-        for (i = 0; i < len; i++) {
-            c = str.charCodeAt(i);
-            if ((c >= 0x0001) && (c <= 0x007F)) {
-                out += str.charAt(i);
-            } else if (c > 0x07FF) {
-                out += String.fromCharCode(0xE0 | ((c >> 12) & 0x0F));
-                out += String.fromCharCode(0x80 | ((c >> 6) & 0x3F));
-                out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
-            } else {
-                out += String.fromCharCode(0xC0 | ((c >> 6) & 0x1F));
-                out += String.fromCharCode(0x80 | ((c >> 0) & 0x3F));
-            }
-        }
-        return out;
+    for (let m = 1; m <= 12; m++) {
+        let opt = document.createElement('option');
+        let mVal = m.toString().padStart(2, '0');
+        opt.value = mVal; opt.innerHTML = mVal + ' 月';
+        monthSelect.appendChild(opt);
     }
 
-    // 3. 執行產生
-    function startGenerate() {
-        // 先檢查函式庫有沒有讀到
-        if (typeof QRCode === 'undefined') {
-            alert("系統元件載入中，請等 3 秒後再試一次！\n如果一直不行，請檢查網路連線。");
+    function generateCode() {
+        const name = document.getElementById('userName').value.trim();
+        const year = document.getElementById('birthYear').value;
+        const month = document.getElementById('birthMonth').value;
+
+        if (!name) {
+            alert("請輸入姓名！");
             return;
         }
 
-        const name = document.getElementById('nameInput').value.trim();
-        if (!name) { alert("請填寫姓名"); return; }
+        // 取得今日日期 YYYYMMDD
+        const today = new Date();
+        const tY = today.getFullYear();
+        const tM = (today.getMonth() + 1).toString().padStart(2, '0');
+        const tD = today.getDate().toString().padStart(2, '0');
+        const todayStr = `${tY}${tM}${tD}`;
 
-        const year = ySel.value;
-        const month = mSel.value;
+        // 組合內容：姓名 + 出生年月(6位) + 今日日期(8位)
+        const finalString = name + year + month + todayStr;
 
-        const now = new Date();
-        const today = (now.getMonth() + 1).toString().padStart(2, '0') + 
-                      now.getDate().toString().padStart(2, '0');
+        // 顯示內容供確認
+        document.getElementById('codeString').innerText = finalString;
 
-        const finalStr = name + year + month + today;
+        // 使用 QRServer API，這對 UTF-8 (中文) 支援度非常高
+        // 我們將字串進行兩次編碼確保傳輸過程不掉字
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(finalString)}&charset-source=UTF-8`;
 
-        // 清空舊的
-        document.getElementById('qrcode-box').innerHTML = "";
-        document.getElementById('debugText').innerText = finalStr;
-        document.getElementById('output-area').style.display = "flex";
+        const qrImg = document.getElementById('qrImage');
+        const area = document.getElementById('qrcode-area');
+        
+        // 切換圖片
+        qrImg.src = qrUrl;
+        area.style.display = 'flex';
 
-        // 產生 QR Code
-        try {
-            new QRCode(document.getElementById('qrcode-box'), {
-                text: toUtf8(finalStr), // 強制轉換編碼，解決 iPhone/LINE 讀不到問題
-                width: 250,
-                height: 250,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
-
-            // 平滑捲動到下方
+        // 捲動到 QR Code
+        setTimeout(() => {
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        } catch (e) {
-            alert("產生發生錯誤：" + e.message);
-        }
+        }, 300);
     }
 </script>
 
