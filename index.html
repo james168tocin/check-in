@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>活動報到系統 - 中文修復版</title>
+    <title>活動報到系統</title>
     <style>
         body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; display: flex; justify-content: center; padding: 20px; margin: 0; }
         .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
@@ -49,7 +49,7 @@
     
     <div class="form-group">
         <label>姓名</label>
-        <input type="text" id="userName" placeholder="請輸入中文或英文姓名">
+        <input type="text" id="userName" placeholder="請輸入中文全名">
     </div>
 
     <div class="form-group">
@@ -62,15 +62,15 @@
         <select id="birthMonth"></select>
     </div>
 
-    <button onclick="generateCode()">產生報到碼</button>
+    <button onclick="generateCode()">👇我的報到碼</button>
 
     <div id="qrcode-area">
         <div class="label-tag">掃描預覽</div>
         <img id="qrImage" src="" alt="QR Code">
-        <div class="preview-box">
+        <--div class="preview-box">
             <div class="label-tag">產出的字串內容</div>
             <p class="result-text" id="codeString"></p>
-        </div>
+        </div-->
     </div>
 </div>
 
