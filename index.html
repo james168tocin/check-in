@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動報到系統 - 穩定增強版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background-color: #f4f7f9; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: #333; margin-bottom: 25px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        button:active { background-color: #0056b3; }
+        
+        #qrcode-area {
+            margin-top: 30px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+        /* QR Code 畫布樣式 */
+        canvas {
+            border: 8px solid white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .preview-box { margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; width: 100%; text-align: center; }
+        .result-text { font-size: 14px; color: #666; word-break: break-all; font-family: monospace; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>報到碼產生器</h2>
+    
+    <div class="form-group">
+        <label>姓名</label>
+        <input type="text" id="userName" placeholder="請輸入姓名">
+    </div>
+
+    <div class="form-group">
+        <label>出生年 (西元)</label>
+        <select id="birthYear"></select>
+    </div>
+
+    <div class="form-group">
+        <label>出生月</label>
+        <select id="birthMonth"></select>
+    </div>
+
+    <button onclick="generateCode()">產生報到碼</button>
+
+    <div id="qrcode-area">
+        <canvas id="qrCanvas"></canvas>
+        <div class="preview-box">
+            <p class="result-text" id="codeString"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. 初始化選單
+    const yearSelect = document.getElementById('birthYear');
+    const monthSelect = document.getElementById('birthMonth');
+
+    for (let y = 2020; y >= 1920; y--) {
+        let opt = document.createElement('option');
+        opt.value = y; opt.innerHTML = y + ' 年';
+        yearSelect.appendChild(opt);
+    }
+
+    for (let m = 1; m <= 12; m++) {
+        let opt = document.createElement('option');
+        let mVal = m.toString().padStart(2, '0');
+        opt.value = mVal; opt.innerHTML = mVal + ' 月';
+        monthSelect.appendChild(opt);
+    }
+
+    // 2. 產生邏輯
+    function generateCode() {
+        const name = document.getElementById('userName').value.trim();
+        const year = document.getElementById('birthYear').value;
+        const month = document.getElementById('birthMonth').value;
+
+        if (!name) {
+            alert("請填寫姓名！");
+            return;
+        }
+
+        // 檢查函式庫是否載入成功
+        if (typeof QRious === 'undefined') {
+            alert("系統正在載入中，請稍候 3 秒再試一次。");
+            return;
+        }
+
+        const today = new Date();
+        const tY = today.getFullYear();
+        const tM = (today.getMonth() + 1).toString().padStart(2, '0');
+        const tD = today.getDate().toString().padStart(2, '0');
+        const todayStr = `${tY}${tM}${tD}`;
+
+        const finalString = name + year + month + todayStr;
+
+        // 顯示內容
+        document.getElementById('codeString').innerText = "報到內容：" + finalString;
+        document.getElementById('qrcode-area').style.display = 'flex';
+
+        // 使用 QRious 產生 QR Code
+        const qr = new QRious({
+            element: document.getElementById('qrCanvas'),
+            value: finalString,
+            size: 250,
+            level: 'H' // 高容錯等級
+        });
+
+        // 平滑捲動
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
